@@ -1,16 +1,6 @@
-/*
-  Seed script (TypeScript version)
-  Run with:  npx ts-node --compiler-options '{"module":"commonjs"}' prisma/seed.ts
-*/
 
-// Using dynamic require to avoid ESM/CJS issues when running via ts-node or ts-node/register.
-// If you prefer pure JS, keep using prisma/seed.js instead.
-// This TypeScript version is optional.
-// To run: npx ts-node --transpile-only prisma/seed.ts
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { PrismaClient } = require('@prisma/client');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
