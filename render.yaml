@@ -4,7 +4,8 @@ services:
     env: node
     plan: free
     buildCommand: npm install && npm run build
-    startCommand: npm run start
+    # Auto-run pending Prisma migrations before starting the app
+    startCommand: npx prisma migrate deploy && npm run start
     envVars:
       - key: NODE_VERSION
         value: 18
@@ -18,3 +19,7 @@ services:
       # - O365_SECURE (false)
       # - MAIL_FROM
       # - MAIL_BCC (valgfri)
+      # Valgfrie stylingvariabler for e-postmal:
+      # - MAIL_TEMPLATE_WIDTH (standard 420)
+      # - MAIL_LOGO_MAX_HEIGHT (standard 20)
+      # - MAIL_FROM_NAME (f.eks. "HOLSHIP RMS")
