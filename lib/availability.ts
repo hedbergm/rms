@@ -36,17 +36,24 @@ export async function getAvailability(date: Date, type: 'LOADING' | 'UNLOADING')
     }
   });
 
-  // Fetch closures (ClosedSlot) impacting this day/type
-  // @ts-ignore generated after migration
-  const closures = await (prisma as any).closedSlot.findMany({
-    where: {
-      date: dayStart,
-      OR: [
-        { type: type },
-        { type: 'BOTH' }
-      ]
+  // Fetch closures (ClosedSlot) impacting this day/type (tolerate if model not migrated yet)
+  let closures: any[] = [];
+  try {
+    const client: any = prisma as any;
+    if (client.closedSlot) {
+      closures = await client.closedSlot.findMany({
+        where: {
+          date: dayStart,
+          OR: [
+            { type: type },
+            { type: 'BOTH' }
+          ]
+        }
+      });
     }
-  });
+  } catch (e) {
+    // ignore – treat as no closures
+  }
 
   function getClosure(ramp: number, slotStart: Date) {
     if (!closures.length) return null;
@@ -65,9 +72,10 @@ export async function getAvailability(date: Date, type: 'LOADING' | 'UNLOADING')
   let cursor = windowStart;
   const now = new Date();
   const cutoff = new Date(now.getTime() + 60*60*1000);
-  while (isBefore(cursor, windowEnd) || isEqual(cursor, windowEnd)) {
+  // Viktig: ikke inkludere windowEnd selv ellers kan cursor låse seg ved break
+  while (isBefore(cursor, windowEnd)) {
     const end = addMinutes(cursor, cfg.slotMinutes);
-    if (end > windowEnd) break;
+    if (end > windowEnd) break; // siste slot får ikke starte dersom den ender utenfor vindu
     for (const ramp of cfg.ramps) {
       const booking = bookings.find(b => b.rampNumber === ramp && b.start.getTime() === cursor.getTime());
       const expired = cursor < cutoff; // ikke tilgjengelig lenger hvis under 1 time

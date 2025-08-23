@@ -19,8 +19,8 @@ model User {
 }
 
 model Booking {
-  id         String    @id @default(cuid())
-  type       String    // LOADING | UNLOADING
+  id         String   @id @default(cuid())
+  type       String // LOADING | UNLOADING
   rampNumber Int
   start      DateTime
   end        DateTime
@@ -28,15 +28,15 @@ model Booking {
   company    String
   email      String
   phone      String
-  goodsType  String    // IFCO | GEN_CARGO
-  reference  String?   // Referanse / ordrenr
-  createdAt  DateTime  @default(now())
-  user       User      @relation(fields: [userId], references: [id])
+  goodsType  String // IFCO | GEN_CARGO
+  reference  String? // Referanse / ordrenr
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
   userId     String
 
+  @@unique([rampNumber, start])
   @@index([start])
   @@index([rampNumber])
-  @@unique([rampNumber, start])
 }
 
 // Fleksible stengte tider (helligdag, vedlikehold osv.)
@@ -45,10 +45,10 @@ model Booking {
 model ClosedSlot {
   id              String   @id @default(cuid())
   date            DateTime // Normaliseres til 00:00 lokal tid ved lagring
-  type            String   // LOADING | UNLOADING | BOTH
-  rampNumber      Int?     // null = alle ramper
-  startMinute     Int?     // minutter fra dagsstart (07:00 definisjon i availability brukes til filtrering)
-  durationMinutes Int?     // lengde, hvis null og startMinute finnes => gjelder resten av dagen
+  type            String // LOADING | UNLOADING | BOTH
+  rampNumber      Int? // null = alle ramper
+  startMinute     Int? // minutter fra dagsstart (07:00 definisjon i availability brukes til filtrering)
+  durationMinutes Int? // lengde, hvis null og startMinute finnes => gjelder resten av dagen
   reason          String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
