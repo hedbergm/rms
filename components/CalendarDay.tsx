@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface Slot { rampNumber:number; start:string; end:string; status:'FREE'|'BOOKED'; expired?: boolean; }
+interface Slot { rampNumber:number; start:string; end:string; status:'FREE'|'BOOKED'|'CLOSED'; expired?: boolean; closedReason?: string|null; }
 
 export default function CalendarDay({ slots, onSlotClick }:{ slots: Slot[]; onSlotClick:(s:Slot)=>void }) {
   if(!slots.length) return <div className="mt-4">Ingen slots.</div>;
@@ -27,11 +27,23 @@ export default function CalendarDay({ slots, onSlotClick }:{ slots: Slot[]; onSl
                   const slot = tSlots.find(s=>s.rampNumber===r);
                   if(!slot) return <td key={r} className="p-2" />;
           const isBooked = slot.status==='BOOKED';
+          const isClosed = slot.status==='CLOSED';
           const isExpired = !!slot.expired;
-          const disabled = isBooked || isExpired;
+          const disabled = isBooked || isExpired || isClosed;
                   return (
                     <td key={r} className="p-1">
-            <button disabled={disabled} onClick={()=>onSlotClick(slot)} className={`w-full rounded py-2 text-xs ${isBooked? 'bg-gray-600 text-gray-300 cursor-not-allowed': (isExpired? 'bg-gray-800 text-gray-500 cursor-not-allowed':'bg-brand-500 hover:bg-brand-500/80 text-white')}`}>{isBooked? 'Booket': (isExpired? 'For sent' : 'Ledig')}</button>
+            <button
+              disabled={disabled}
+              title={isClosed? (slot.closedReason||'Stengt') : (isBooked? 'Booket' : (isExpired? 'For sent' : 'Ledig'))}
+              onClick={()=>onSlotClick(slot)}
+              className={`w-full rounded py-2 text-xs border
+                ${isClosed? 'bg-red-900/40 border-red-500/40 text-red-300 cursor-not-allowed'
+                : isBooked? 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
+                : isExpired? 'bg-gray-800 border-gray-700 text-gray-500 cursor-not-allowed'
+                : 'bg-brand-500 border-brand-500 hover:bg-brand-500/80 text-white'}`}
+            >
+              {isClosed? 'Stengt' : isBooked? 'Booket' : isExpired? 'For sent' : 'Ledig'}
+            </button>
                     </td>
                   );
                 })}
@@ -40,6 +52,12 @@ export default function CalendarDay({ slots, onSlotClick }:{ slots: Slot[]; onSl
           })}
         </tbody>
       </table>
+      <div className="p-2 text-[10px] flex flex-wrap gap-4 bg-gray-800 border-t border-gray-700">
+        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-brand-500" /> Ledig</div>
+        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-gray-600" /> Booket</div>
+        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-red-900" /> Stengt</div>
+        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-gray-800 border border-gray-600" /> For sent</div>
+      </div>
     </div>
   );
 }

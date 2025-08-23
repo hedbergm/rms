@@ -54,7 +54,10 @@ export default function WeekView(){
 
   return (
     <div className="p-4 space-y-6">
-      <h1 className="text-xl font-semibold">Ukesoversikt</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Ukesoversikt</h1>
+        <a href="/admin/closed" className="text-sm text-blue-400 hover:underline">Steng tider</a>
+      </div>
       <div className="flex gap-4 items-end flex-wrap">
         <div className="flex flex-col">
           <label className="text-xs mb-1">Uke start (mandag)</label>

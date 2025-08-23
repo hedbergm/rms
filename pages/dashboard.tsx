@@ -62,7 +62,10 @@ export default function Dashboard() {
           {menuOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded shadow-lg py-1 text-sm z-20">
               <button onClick={()=>{ setMenuOpen(false); router.push('/password'); }} className="w-full text-left px-3 py-2 hover:bg-gray-700">Endre passord</button>
-              {user?.role==='ADMIN' && <button onClick={()=>{ setMenuOpen(false); window.open('/admin/week','_blank'); }} className="w-full text-left px-3 py-2 hover:bg-gray-700">Ukesvisning</button>}
+              {user?.role==='ADMIN' && <>
+                <button onClick={()=>{ setMenuOpen(false); window.open('/admin/week','_blank'); }} className="w-full text-left px-3 py-2 hover:bg-gray-700">Ukesvisning</button>
+                <button onClick={()=>{ setMenuOpen(false); window.open('/admin/closed','_blank'); }} className="w-full text-left px-3 py-2 hover:bg-gray-700">Steng tider</button>
+              </>}
               <div className="h-px bg-gray-700 my-1" />
               <button onClick={logout} className="w-full text-left px-3 py-2 hover:bg-gray-700 text-red-300">Logg ut</button>
             </div>

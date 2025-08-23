@@ -38,3 +38,21 @@ model Booking {
   @@index([rampNumber])
   @@unique([rampNumber, start])
 }
+
+// Fleksible stengte tider (helligdag, vedlikehold osv.)
+// Hvis startMinute er null => hele dagen for gitt type/ramp (eller alle ramper hvis rampNumber null)
+// Hvis rampNumber null => gjelder alle relevante ramper for type (eller begge typer hvis type=BOTH)
+model ClosedSlot {
+  id              String   @id @default(cuid())
+  date            DateTime // Normaliseres til 00:00 lokal tid ved lagring
+  type            String   // LOADING | UNLOADING | BOTH
+  rampNumber      Int?     // null = alle ramper
+  startMinute     Int?     // minutter fra dagsstart (07:00 definisjon i availability brukes til filtrering)
+  durationMinutes Int?     // lengde, hvis null og startMinute finnes => gjelder resten av dagen
+  reason          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([date, type])
+  @@index([date, rampNumber])
+}

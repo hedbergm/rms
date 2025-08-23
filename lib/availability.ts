@@ -5,9 +5,10 @@ export type Slot = {
   rampNumber: number;
   start: string; // ISO
   end: string;   // ISO
-  status: 'FREE' | 'BOOKED';
+  status: 'FREE' | 'BOOKED' | 'CLOSED';
   bookingId?: string;
   expired?: boolean; // mindre enn cutoff eller i fortid
+  closedReason?: string | null;
 };
 
 interface Config { ramps: number[]; slotMinutes: number; windowStart: { h: number; m: number }; windowEnd: { h: number; m: number }; }
@@ -35,6 +36,31 @@ export async function getAvailability(date: Date, type: 'LOADING' | 'UNLOADING')
     }
   });
 
+  // Fetch closures (ClosedSlot) impacting this day/type
+  // @ts-ignore generated after migration
+  const closures = await (prisma as any).closedSlot.findMany({
+    where: {
+      date: dayStart,
+      OR: [
+        { type: type },
+        { type: 'BOTH' }
+      ]
+    }
+  });
+
+  function getClosure(ramp: number, slotStart: Date) {
+    if (!closures.length) return null;
+    const offset = Math.floor((slotStart.getTime() - dayStart.getTime()) / 60000);
+    return closures.find((c: any) => {
+      if (c.rampNumber !== null && c.rampNumber !== ramp) return false;
+      if (c.startMinute == null) return true; // hele dagen
+      const startM = c.startMinute;
+      const dur = c.durationMinutes ?? (24*60 - startM);
+      const endM = startM + dur;
+      return offset >= startM && offset < endM;
+    }) || null;
+  }
+
   // Build time grid
   let cursor = windowStart;
   const now = new Date();
@@ -45,13 +71,15 @@ export async function getAvailability(date: Date, type: 'LOADING' | 'UNLOADING')
     for (const ramp of cfg.ramps) {
       const booking = bookings.find(b => b.rampNumber === ramp && b.start.getTime() === cursor.getTime());
       const expired = cursor < cutoff; // ikke tilgjengelig lenger hvis under 1 time
+      const closure = getClosure(ramp, cursor);
       slots.push({
         rampNumber: ramp,
         start: cursor.toISOString(),
         end: end.toISOString(),
-        status: booking ? 'BOOKED' : 'FREE',
+        status: booking ? 'BOOKED' : (closure ? 'CLOSED' : 'FREE'),
         bookingId: booking?.id,
-        expired
+        expired: (closure ? true : expired),
+        closedReason: closure?.reason || null
       });
     }
     cursor = addMinutes(cursor, cfg.slotMinutes);
