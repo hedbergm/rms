@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: holship-rms
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      # Legg til disse i Render dashboardet med riktige verdier:
+      # - DATABASE_URL
+      # - JWT_SECRET
+      # - O365_USER
+      # - O365_PASS
+      # - O365_HOST (smtp.office365.com)
+      # - O365_PORT (587)
+      # - O365_SECURE (false)
+      # - MAIL_FROM
+      # - MAIL_BCC (valgfri)

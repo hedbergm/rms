@@ -1,0 +1,40 @@
+// Prisma schema for RMS
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         String    @default("USER") // ADMIN | USER (app-level enum)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  bookings     Booking[]
+}
+
+model Booking {
+  id         String    @id @default(cuid())
+  type       String    // LOADING | UNLOADING
+  rampNumber Int
+  start      DateTime
+  end        DateTime
+  regNr      String
+  company    String
+  email      String
+  phone      String
+  goodsType  String    // IFCO | GEN_CARGO
+  reference  String?   // Referanse / ordrenr
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id])
+  userId     String
+
+  @@index([start])
+  @@index([rampNumber])
+  @@unique([rampNumber, start])
+}
