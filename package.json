@@ -9,12 +9,12 @@
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
-  "prisma:migrate:deploy": "prisma migrate deploy",
-  "seed": "node prisma/seed.js",
-  "postinstall": "prisma generate"
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "seed": "node prisma/seed.js",
+  "postinstall": "node -e \"if(!process.env.PRISMA_SKIP_POSTINSTALL_GENERATE){require('child_process').execSync('npx prisma generate',{stdio:'inherit'})} else {console.log('Skip prisma generate (PRISMA_SKIP_POSTINSTALL_GENERATE set)')}\""
   },
   "dependencies": {
-  "@prisma/client": "6.14.0",
+    "@prisma/client": "6.14.0",
     "bcryptjs": "^2.4.3",
     "cookie": "^0.6.0",
     "date-fns": "^3.6.0",
@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.2",
+    "@types/cookie": "^0.6.0",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.11.0",
     "@types/nodemailer": "^6.4.14",
@@ -34,7 +35,7 @@
     "@types/react-dom": "^18.2.11",
     "autoprefixer": "^10.4.18",
     "postcss": "^8.4.35",
-  "prisma": "6.14.0",
+    "prisma": "6.14.0",
     "tailwindcss": "^3.4.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
