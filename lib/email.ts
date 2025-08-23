@@ -28,7 +28,10 @@ export const transporter = nodemailer.createTransport({
 
 async function sendWithFallback(opts: SendMailOptions) {
   if (!user || !pass) {
-    console.warn('SMTP not configured; skipping email.');
+  const missing: string[] = [];
+  if (!user) missing.push('O365_USER');
+  if (!pass) missing.push('O365_PASS');
+  console.warn(`SMTP not configured; missing ${missing.join(', ')}. Skipping email.`);
     return;
   }
   // First attempt using configuredFrom
