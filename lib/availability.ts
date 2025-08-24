@@ -13,8 +13,9 @@ export type Slot = {
 
 interface Config { ramps: number[]; slotMinutes: number; windowStart: { h: number; m: number }; windowEnd: { h: number; m: number }; }
 
-export const LOADING_RAMPS = [8,9,10,11];
-export const UNLOADING_RAMPS = [3,4,5];
+// Oppdatert: fjernet laste rampe 11 og losse rampe 5
+export const LOADING_RAMPS = [8,9,10];
+export const UNLOADING_RAMPS = [3,4];
 const LOADING_CONFIG: Config = { ramps: LOADING_RAMPS, slotMinutes: 60, windowStart: {h:7,m:0}, windowEnd: {h:17,m:0} }; // Last possible start 16:00
 const UNLOADING_CONFIG: Config = { ramps: UNLOADING_RAMPS, slotMinutes: 45, windowStart: {h:7,m:0}, windowEnd: {h:18,m:0} }; // Last possible start 17:15
 
