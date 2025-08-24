@@ -8,7 +8,7 @@ const minToHHMM = (m:number|null) => m==null ? '' : `${String(Math.floor(m/60)).
 export default function ClosedAdmin(){
   const [list,setList] = useState<ClosedSlot[]>([]);
   const [loading,setLoading] = useState(false);
-  const [form,setForm] = useState<any>({ date:'', type:'BOTH', rampNumber:'', startMinute:'', durationMinutes:'', reason:'' });
+  const [form,setForm] = useState<any>({ date:'', type:'BOTH', rampNumber:'', startTime:'', endTime:'', reason:'' });
   const load = async()=>{
     setLoading(true);
     const r = await fetch('/api/closed');
@@ -21,8 +21,11 @@ export default function ClosedAdmin(){
 
   const submit = async(e:any)=>{
     e.preventDefault();
-    const r = await fetch('/api/closed',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(form)});
-    if(r.ok){ setForm({ date:'', type:'BOTH', rampNumber:'', startMinute:'', durationMinutes:'', reason:'' }); load(); }
+    const payload = { ...form };
+    // hvis begge tomme => hele dagen
+    if(!payload.startTime && payload.endTime){ alert('Angi starttid'); return; }
+    const r = await fetch('/api/closed',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    if(r.ok){ setForm({ date:'', type:'BOTH', rampNumber:'', startTime:'', endTime:'', reason:'' }); load(); }
   };
 
   const remove = async(id:string)=>{
@@ -33,7 +36,7 @@ export default function ClosedAdmin(){
 
   return <div className="p-4 text-sm">
     <h1 className="text-xl mb-4 font-semibold">Stengte tider / helligdager</h1>
-    <form onSubmit={submit} className="grid gap-2 md:grid-cols-6 bg-gray-800 p-3 rounded mb-6">
+    <form onSubmit={submit} className="grid gap-2 md:grid-cols-7 bg-gray-800 p-3 rounded mb-6 text-xs md:text-sm">
       <input required type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} className="bg-gray-700 p-1 rounded" />
       <select value={form.type} onChange={e=>setForm({...form,type:e.target.value})} className="bg-gray-700 p-1 rounded">
         <option value="BOTH">Begge</option>
@@ -41,11 +44,12 @@ export default function ClosedAdmin(){
         <option value="UNLOADING">Lossing</option>
       </select>
       <input placeholder="Rampe (valgfri)" value={form.rampNumber} onChange={e=>setForm({...form,rampNumber:e.target.value})} className="bg-gray-700 p-1 rounded" />
-      <input placeholder="Start (min fra 00:00)" value={form.startMinute} onChange={e=>setForm({...form,startMinute:e.target.value})} className="bg-gray-700 p-1 rounded" />
-      <input placeholder="Varighet (min)" value={form.durationMinutes} onChange={e=>setForm({...form,durationMinutes:e.target.value})} className="bg-gray-700 p-1 rounded" />
-      <input placeholder="Årsak / kommentar" value={form.reason} onChange={e=>setForm({...form,reason:e.target.value})} className="bg-gray-700 p-1 rounded col-span-2 md:col-span-6" />
-      <div className="md:col-span-6 flex gap-2">
+      <input placeholder="Start HH:MM" value={form.startTime} onChange={e=>setForm({...form,startTime:e.target.value})} className="bg-gray-700 p-1 rounded" />
+      <input placeholder="Slutt HH:MM" value={form.endTime} onChange={e=>setForm({...form,endTime:e.target.value})} className="bg-gray-700 p-1 rounded" />
+      <input placeholder="Årsak / kommentar" value={form.reason} onChange={e=>setForm({...form,reason:e.target.value})} className="bg-gray-700 p-1 rounded md:col-span-2 col-span-7" />
+      <div className="md:col-span-7 flex flex-wrap gap-2 items-center">
         <button className="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded">Legg til</button>
+        <span className="text-[10px] opacity-60">Tom start/slutt = hele dagen. Tom rampe = alle ramper.</span>
       </div>
     </form>
     {loading && <div>Laster...</div>}
@@ -55,8 +59,7 @@ export default function ClosedAdmin(){
           <th className="p-2">Dato</th>
           <th className="p-2">Type</th>
           <th className="p-2">Rampe</th>
-          <th className="p-2">Start</th>
-          <th className="p-2">Varighet</th>
+          <th className="p-2">Periode</th>
           <th className="p-2">Årsak</th>
           <th className="p-2"></th>
         </tr>
@@ -66,8 +69,7 @@ export default function ClosedAdmin(){
           <td className="p-2">{c.date.substring(0,10)}</td>
           <td className="p-2">{c.type==='BOTH'?'Begge': c.type==='LOADING'?'Lasting':'Lossing'}</td>
           <td className="p-2">{c.rampNumber ?? ''}</td>
-          <td className="p-2">{minToHHMM(c.startMinute)}</td>
-            <td className="p-2">{c.durationMinutes ?? ''}</td>
+          <td className="p-2">{c.startMinute==null? 'Hele dagen' : `${minToHHMM(c.startMinute)}${c.durationMinutes? ' - '+minToHHMM(c.startMinute + c.durationMinutes):' →'}`}</td>
           <td className="p-2">{c.reason}</td>
           <td className="p-2"><button onClick={()=>remove(c.id)} className="text-red-400 hover:underline">Slett</button></td>
         </tr>)}

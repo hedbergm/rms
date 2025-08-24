@@ -22,17 +22,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if(req.method === 'POST') {
-    const { date, type, rampNumber, startMinute, durationMinutes, reason } = req.body || {};
+    const { date, type, rampNumber, startMinute, durationMinutes, reason, startTime, endTime } = req.body || {};
     if(!date || !type) return res.status(400).json({ message: 'Mangler date/type' });
     if(!['LOADING','UNLOADING','BOTH'].includes(type)) return res.status(400).json({ message: 'Ugyldig type' });
     const d = startOfDay(new Date(date+'T00:00:00'));
+
+    function hmToMinutes(hm:string){
+      const m = /^([0-2]?\d):([0-5]\d)$/.exec(hm);
+      if(!m) return null; const h = Number(m[1]); const min = Number(m[2]);
+      if(h>23) return null; return h*60+min;
+    }
+
+    let sMin: number | null = null;
+    let dur: number | null = null;
+
+    if(startTime || endTime){
+      if(!startTime) return res.status(400).json({ message:'Mangler start tid' });
+      const s = hmToMinutes(startTime);
+      if(s==null) return res.status(400).json({ message:'Ugyldig start tid' });
+      sMin = s;
+      if(endTime){
+        const e = hmToMinutes(endTime);
+        if(e==null) return res.status(400).json({ message:'Ugyldig slutt tid' });
+        if(e<=s) return res.status(400).json({ message:'Slutt må være etter start' });
+        dur = e - s;
+      } else {
+        dur = null; // resten av dagen
+      }
+    } else if(startMinute !== undefined && startMinute !== '' ) {
+      const s = Number(startMinute); if(isNaN(s)||s<0||s>24*60) return res.status(400).json({ message:'Ugyldig startMinute' });
+      sMin = s;
+      if(durationMinutes !== undefined && durationMinutes !== '') {
+        const dm = Number(durationMinutes); if(isNaN(dm)||dm<=0) return res.status(400).json({ message:'Ugyldig durationMinutes' });
+        dur = dm;
+      }
+    } else {
+      // Hele dagen
+      sMin = null; dur = null;
+    }
+
     // @ts-ignore
     const created = await (prisma as any).closedSlot.create({ data: {
       date: d,
       type,
       rampNumber: rampNumber === null || rampNumber === undefined || rampNumber === '' ? null : Number(rampNumber),
-      startMinute: startMinute === null || startMinute === undefined || startMinute === '' ? null : Number(startMinute),
-      durationMinutes: durationMinutes === null || durationMinutes === undefined || durationMinutes === '' ? null : Number(durationMinutes),
+      startMinute: sMin,
+      durationMinutes: dur,
       reason: reason ? String(reason).slice(0,200) : null
     }});
     return res.json(created);
