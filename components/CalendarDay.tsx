@@ -37,7 +37,7 @@ export default function CalendarDay({ slots, onSlotClick }:{ slots: Slot[]; onSl
               disabled={disabled}
               title={isClosed? (slot.closedReason||'Stengt') : (isBooked? 'Booket' : (isExpired? 'For sent' : 'Ledig'))}
               onClick={()=>onSlotClick(slot)}
-              className={`w-28 h-10 px-2 rounded text-sm font-medium border flex items-center justify-center transition-colors
+              className={`w-56 h-10 px-2 rounded text-sm font-medium border flex items-center justify-center transition-colors
                 ${isClosed? 'bg-red-900/40 border-red-500/40 text-red-300 cursor-not-allowed'
                 : isBooked? 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
                 : isExpired? 'bg-gray-800 border-gray-700 text-gray-500 cursor-not-allowed'
