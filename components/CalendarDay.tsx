@@ -32,11 +32,12 @@ export default function CalendarDay({ slots, onSlotClick }:{ slots: Slot[]; onSl
           const disabled = isBooked || isExpired || isClosed;
                   return (
                     <td key={r} className="p-1">
+            <div className="flex justify-center">
             <button
               disabled={disabled}
               title={isClosed? (slot.closedReason||'Stengt') : (isBooked? 'Booket' : (isExpired? 'For sent' : 'Ledig'))}
               onClick={()=>onSlotClick(slot)}
-              className={`w-full min-w-[100px] h-10 px-2 rounded text-sm font-medium border flex items-center justify-center transition-colors
+              className={`w-28 h-10 px-2 rounded text-sm font-medium border flex items-center justify-center transition-colors
                 ${isClosed? 'bg-red-900/40 border-red-500/40 text-red-300 cursor-not-allowed'
                 : isBooked? 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
                 : isExpired? 'bg-gray-800 border-gray-700 text-gray-500 cursor-not-allowed'
@@ -44,6 +45,7 @@ export default function CalendarDay({ slots, onSlotClick }:{ slots: Slot[]; onSl
             >
               {isClosed? 'Stengt' : isBooked? 'Booket' : isExpired? 'For sent' : 'Ledig'}
             </button>
+            </div>
                     </td>
                   );
                 })}
