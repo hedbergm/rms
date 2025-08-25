@@ -3,7 +3,7 @@ services:
     name: holship-rms
     env: node
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && npx prisma generate && npm run build
     # Auto-run pending Prisma migrations before starting the app
     startCommand: npx prisma migrate deploy && npm run start
     envVars:
