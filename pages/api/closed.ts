@@ -22,10 +22,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if(req.method === 'POST') {
-    const { date, type, rampNumber, startMinute, durationMinutes, reason, startTime, endTime } = req.body || {};
-    if(!date || !type) return res.status(400).json({ message: 'Mangler date/type' });
-    if(!['LOADING','UNLOADING','BOTH'].includes(type)) return res.status(400).json({ message: 'Ugyldig type' });
-    const d = startOfDay(new Date(date+'T00:00:00'));
+    try {
+      const { date, type, rampNumber, startMinute, durationMinutes, reason, startTime, endTime } = req.body || {};
+      console.log('POST /api/closed body:', JSON.stringify({ date, type, rampNumber, startTime, endTime, reason }));
+      if(!date || !type) return res.status(400).json({ message: 'Mangler date/type' });
+      if(!['LOADING','UNLOADING','BOTH'].includes(type)) return res.status(400).json({ message: 'Ugyldig type' });
+      const d = startOfDay(new Date(date+'T00:00:00'));
 
     function hmToMinutes(hm:string){
       const m = /^([0-2]?\d):([0-5]\d)$/.exec(hm);
@@ -70,7 +72,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       durationMinutes: dur,
       reason: reason ? String(reason).slice(0,200) : null
     }});
+    console.log('Created ClosedSlot:', JSON.stringify(created));
     return res.json(created);
+    } catch (error: any) {
+      console.error('Error in POST /api/closed:', error);
+      return res.status(500).json({ 
+        message: 'Serverfeil',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
   }
 
   if(req.method === 'DELETE') {
