@@ -5,8 +5,9 @@ import { startOfDay } from 'date-fns';
 
 // Manage ClosedSlot entries
 export default async function handler(req: NextApiRequest, res: NextApiResponse){
-  const user = await getUserFromReq(req);
-  if(!user || user.role !== 'ADMIN') return res.status(403).json({ message: 'Ingen tilgang' });
+  try {
+    const user = await getUserFromReq(req);
+    if(!user || user.role !== 'ADMIN') return res.status(403).json({ message: 'Ingen tilgang' });
 
   if(req.method === 'GET') {
     // list range (optional) else upcoming 60d
@@ -96,4 +97,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   res.status(405).end();
+  } catch (error: any) {
+    console.error('Error in /api/closed:', error);
+    return res.status(500).json({ 
+      message: 'Serverfeil',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
 }
