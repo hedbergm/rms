@@ -11,7 +11,7 @@
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "seed": "node prisma/seed.js",
-  "postinstall": "node -e \"if(!process.env.PRISMA_SKIP_POSTINSTALL_GENERATE){require('child_process').execSync('npx prisma generate',{stdio:'inherit'})} else {console.log('Skip prisma generate (PRISMA_SKIP_POSTINSTALL_GENERATE set)')}\""
+  "postinstall": "npx prisma generate && npx prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "6.14.0",
