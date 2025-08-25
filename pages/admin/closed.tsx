@@ -11,10 +11,20 @@ export default function ClosedAdmin(){
   const [form,setForm] = useState<any>({ date:'', type:'BOTH', rampNumber:'', startTime:'', endTime:'', reason:'' });
   const load = async()=>{
     setLoading(true);
-    const r = await fetch('/api/closed');
-    if(r.status===403) { Router.push('/'); return; }
-    const data = await r.json();
-    setList(data);
+    try {
+      const r = await fetch('/api/closed');
+      if(r.status===403) { Router.push('/'); return; }
+      const data = await r.json();
+      if(!Array.isArray(data)) {
+        console.error('Unexpected API response:', data);
+        setList([]);
+      } else {
+        setList(data);
+      }
+    } catch(error) {
+      console.error('Error loading closed slots:', error);
+      setList([]);
+    }
     setLoading(false);
   };
   useEffect(()=>{ load(); },[]);

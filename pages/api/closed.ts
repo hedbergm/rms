@@ -9,17 +9,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const user = await getUserFromReq(req);
     if(!user || user.role !== 'ADMIN') return res.status(403).json({ message: 'Ingen tilgang' });
 
-  if(req.method === 'GET') {
-    // list range (optional) else upcoming 60d
-    const { start, end } = req.query;
-    const startDate = start && typeof start==='string' ? startOfDay(new Date(start+'T00:00:00')) : startOfDay(new Date());
-    const endDate = end && typeof end==='string' ? startOfDay(new Date(end+'T00:00:00')) : startOfDay(new Date(Date.now()+60*24*60*60*1000));
-    // @ts-ignore model added post-migration
-    const rows = await (prisma as any).closedSlot.findMany({
-      where:{ date: { gte: startDate, lte: endDate } },
-      orderBy:{ date:'asc' }
-    });
-    return res.json(rows);
+    if(req.method === 'GET') {
+    try {
+      // list range (optional) else upcoming 60d
+      const { start, end } = req.query;
+      const startDate = start && typeof start==='string' ? startOfDay(new Date(start+'T00:00:00')) : startOfDay(new Date());
+      const endDate = end && typeof end==='string' ? startOfDay(new Date(end+'T00:00:00')) : startOfDay(new Date(Date.now()+60*24*60*60*1000));
+      console.log('GET /api/closed querying:', { startDate, endDate });
+      
+      // Verify the table exists first
+      const tableExists = await prisma.$queryRaw`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public'
+          AND table_name = 'ClosedSlot'
+        );
+      `;
+      console.log('ClosedSlot table exists:', tableExists);
+      
+      if(!tableExists) {
+        console.error('ClosedSlot table does not exist!');
+        return res.status(500).json({ error: 'Database not properly migrated' });
+      }
+
+      // @ts-ignore model added post-migration
+      const rows = await (prisma as any).closedSlot.findMany({
+        where:{ date: { gte: startDate, lte: endDate } },
+        orderBy:{ date:'asc' }
+      });
+      console.log('GET /api/closed found rows:', rows?.length ?? 'null');
+      return res.json(rows || []);
   }
 
   if(req.method === 'POST') {
@@ -44,11 +63,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const s = hmToMinutes(startTime);
       if(s==null) return res.status(400).json({ message:'Ugyldig start tid' });
       sMin = s;
-      if(endTime){
+      if(endTime && typeof s === 'number'){
         const e = hmToMinutes(endTime);
-        if(e==null) return res.status(400).json({ message:'Ugyldig slutt tid' });
-        if(e<=s) return res.status(400).json({ message:'Slutt må være etter start' });
-        dur = e - s;
+        if(typeof e === 'number'){
+          if(e <= s) return res.status(400).json({ message:'Slutt må være etter start' });
+          dur = e - s;
+        } else {
+          return res.status(400).json({ message:'Ugyldig slutt tid' });
+        }
       } else {
         dur = null; // resten av dagen
       }
@@ -97,6 +119,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   res.status(405).end();
+    return res.status(405).end();
   } catch (error: any) {
     console.error('Error in /api/closed:', error);
     return res.status(500).json({ 
