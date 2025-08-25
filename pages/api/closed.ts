@@ -3,122 +3,117 @@ import { getUserFromReq } from '../../lib/auth';
 import { prisma } from '../../lib/prisma';
 import { startOfDay } from 'date-fns';
 
-// Manage ClosedSlot entries
-export default async function handler(req: NextApiRequest, res: NextApiResponse){
-  try {
-    const user = await getUserFromReq(req);
-    if(!user || user.role !== 'ADMIN') return res.status(403).json({ message: 'Ingen tilgang' });
+function hmToMinutes(hm: string): number | null {
+  const m = /^([0-2]?\d):([0-5]\d)$/.exec(hm);
+  if(!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if(h>23) return null;
+  return h*60+min;
+}
 
-    if(req.method === 'GET') {
-    try {
-      // list range (optional) else upcoming 60d
+// Manage ClosedSlot entries
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    // Auth check
+    const user = await getUserFromReq(req);
+    if(!user || user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Ingen tilgang' });
+    }
+
+    // Table existence check
+    const [{ exists }] = await prisma.$queryRaw`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        AND table_name = 'ClosedSlot'
+      );
+    ` as [{ exists: boolean }];
+
+    if (!exists) {
+      console.error('ClosedSlot table does not exist!');
+      return res.status(500).json({ error: 'Database not properly migrated' });
+    }
+    
+    // Handle methods
+    if (req.method === 'GET') {
       const { start, end } = req.query;
       const startDate = start && typeof start==='string' ? startOfDay(new Date(start+'T00:00:00')) : startOfDay(new Date());
       const endDate = end && typeof end==='string' ? startOfDay(new Date(end+'T00:00:00')) : startOfDay(new Date(Date.now()+60*24*60*60*1000));
-      console.log('GET /api/closed querying:', { startDate, endDate });
       
-      // Verify the table exists first
-      const tableExists = await prisma.$queryRaw`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public'
-          AND table_name = 'ClosedSlot'
-        );
-      `;
-      console.log('ClosedSlot table exists:', tableExists);
-      
-      if(!tableExists) {
-        console.error('ClosedSlot table does not exist!');
-        return res.status(500).json({ error: 'Database not properly migrated' });
-      }
-
-      // @ts-ignore model added post-migration
-      const rows = await (prisma as any).closedSlot.findMany({
+      // @ts-ignore
+      const rows = await prisma.closedSlot.findMany({
         where:{ date: { gte: startDate, lte: endDate } },
         orderBy:{ date:'asc' }
       });
-      console.log('GET /api/closed found rows:', rows?.length ?? 'null');
+      
       return res.json(rows || []);
-  }
-
-  if(req.method === 'POST') {
-    try {
-      const { date, type, rampNumber, startMinute, durationMinutes, reason, startTime, endTime } = req.body || {};
-      console.log('POST /api/closed body:', JSON.stringify({ date, type, rampNumber, startTime, endTime, reason }));
-      if(!date || !type) return res.status(400).json({ message: 'Mangler date/type' });
-      if(!['LOADING','UNLOADING','BOTH'].includes(type)) return res.status(400).json({ message: 'Ugyldig type' });
+    }
+    
+    if (req.method === 'POST') {
+      const { date, type, rampNumber, reason, startTime, endTime } = req.body || {};
+      
+      if(!date || !type) {
+        return res.status(400).json({ message: 'Mangler date/type' });
+      }
+      if(!['LOADING','UNLOADING','BOTH'].includes(type)) {
+        return res.status(400).json({ message: 'Ugyldig type' });
+      }
+      
       const d = startOfDay(new Date(date+'T00:00:00'));
+      let sMin: number | null = null;
+      let dur: number | null = null;
 
-    function hmToMinutes(hm:string){
-      const m = /^([0-2]?\d):([0-5]\d)$/.exec(hm);
-      if(!m) return null; const h = Number(m[1]); const min = Number(m[2]);
-      if(h>23) return null; return h*60+min;
-    }
-
-    let sMin: number | null = null;
-    let dur: number | null = null;
-
-    if(startTime || endTime){
-      if(!startTime) return res.status(400).json({ message:'Mangler start tid' });
-      const s = hmToMinutes(startTime);
-      if(s==null) return res.status(400).json({ message:'Ugyldig start tid' });
-      sMin = s;
-      if(endTime && typeof s === 'number'){
-        const e = hmToMinutes(endTime);
-        if(typeof e === 'number'){
-          if(e <= s) return res.status(400).json({ message:'Slutt må være etter start' });
-          dur = e - s;
-        } else {
-          return res.status(400).json({ message:'Ugyldig slutt tid' });
+      // Parse time range if provided
+      if(startTime) {
+        const s = hmToMinutes(startTime);
+        if(s === null) {
+          return res.status(400).json({ message:'Ugyldig start tid' });
         }
-      } else {
-        dur = null; // resten av dagen
+        sMin = s;
+        
+        if(endTime) {
+          const e = hmToMinutes(endTime);
+          if(e === null) {
+            return res.status(400).json({ message:'Ugyldig slutt tid' });
+          }
+          if(e <= s) {
+            return res.status(400).json({ message:'Slutt må være etter start' });
+          }
+          dur = e - s;
+        }
       }
-    } else if(startMinute !== undefined && startMinute !== '' ) {
-      const s = Number(startMinute); if(isNaN(s)||s<0||s>24*60) return res.status(400).json({ message:'Ugyldig startMinute' });
-      sMin = s;
-      if(durationMinutes !== undefined && durationMinutes !== '') {
-        const dm = Number(durationMinutes); if(isNaN(dm)||dm<=0) return res.status(400).json({ message:'Ugyldig durationMinutes' });
-        dur = dm;
-      }
-    } else {
-      // Hele dagen
-      sMin = null; dur = null;
-    }
 
-    // @ts-ignore
-    const created = await (prisma as any).closedSlot.create({ data: {
-      date: d,
-      type,
-      rampNumber: rampNumber === null || rampNumber === undefined || rampNumber === '' ? null : Number(rampNumber),
-      startMinute: sMin,
-      durationMinutes: dur,
-      reason: reason ? String(reason).slice(0,200) : null
-    }});
-    console.log('Created ClosedSlot:', JSON.stringify(created));
-    return res.json(created);
-    } catch (error: any) {
-      console.error('Error in POST /api/closed:', error);
-      return res.status(500).json({ 
-        message: 'Serverfeil',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    }
-  }
-
-  if(req.method === 'DELETE') {
-    const { id } = req.query;
-    if(!id || typeof id !== 'string') return res.status(400).json({ message: 'Mangler id' });
-    try {
+      // Create the closed slot
       // @ts-ignore
-      await (prisma as any).closedSlot.delete({ where:{ id } });
-      return res.json({ message:'Slettet' });
-    } catch(e:any){
-      return res.status(404).json({ message:'Ikke funnet' });
+      const created = await prisma.closedSlot.create({ 
+        data: {
+          date: d,
+          type,
+          rampNumber: rampNumber === null || rampNumber === undefined || rampNumber === '' ? null : Number(rampNumber),
+          startMinute: sMin,
+          durationMinutes: dur,
+          reason: reason ? String(reason).slice(0,200) : null
+        }
+      });
+      
+      return res.json(created);
     }
-  }
 
-  res.status(405).end();
+    if (req.method === 'DELETE') {
+      const { id } = req.query;
+      if(!id || typeof id !== 'string') {
+        return res.status(400).json({ message: 'Mangler id' });
+      }
+      try {
+        // @ts-ignore
+        await prisma.closedSlot.delete({ where:{ id } });
+        return res.json({ message:'Slettet' });
+      } catch(e) {
+        return res.status(404).json({ message:'Ikke funnet' });
+      }
+    }
+
     return res.status(405).end();
   } catch (error: any) {
     console.error('Error in /api/closed:', error);
