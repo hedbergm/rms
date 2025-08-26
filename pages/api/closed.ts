@@ -37,16 +37,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Handle methods
     if (req.method === 'GET') {
-      const { start, end } = req.query;
-      const startDate = start && typeof start==='string' ? startOfDay(new Date(start+'T00:00:00')) : startOfDay(new Date());
-      const endDate = end && typeof end==='string' ? startOfDay(new Date(end+'T00:00:00')) : startOfDay(new Date(Date.now()+60*24*60*60*1000));
-      
-      // @ts-ignore
+      // Hent alle stengte tider (kan legge til filtrering senere hvis nødvendig)
+      console.log('Fetching all closed slots');
       const rows = await prisma.closedSlot.findMany({
-        where:{ date: { gte: startDate, lte: endDate } },
-        orderBy:{ date:'asc' }
+        orderBy: [
+          { date: 'asc' },
+          { startMinute: 'asc' }
+        ]
       });
       
+      console.log('Found closed slots:', rows);
       return res.json(rows || []);
     }
     
@@ -60,7 +60,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ message: 'Ugyldig type' });
       }
       
-      const d = startOfDay(new Date(date+'T00:00:00'));
+      // Ensure date is stored as UTC midnight
+      console.log('Creating closed slot for date:', date);
+      const d = new Date(date + 'T00:00:00.000Z');
+      console.log('Parsed date:', d.toISOString());
+
       let sMin: number | null = null;
       let dur: number | null = null;
 
@@ -71,6 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(400).json({ message:'Ugyldig start tid' });
         }
         sMin = s;
+        console.log('Start minutes:', sMin);
         
         if(endTime) {
           const e = hmToMinutes(endTime);
@@ -81,6 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(400).json({ message:'Slutt må være etter start' });
           }
           dur = e - s;
+          console.log('Duration minutes:', dur);
         }
       }
 
