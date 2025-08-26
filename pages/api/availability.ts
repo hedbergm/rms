@@ -4,6 +4,10 @@ import { getAvailability } from '../../lib/availability';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    // Debug server timezone
+    console.log('Server timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+    console.log('Current server time:', new Date().toString());
+    
     const user = await getUserFromReq(req);
     if (!user) return res.status(401).json({ message: 'Ikke innlogget' });
     const { date, type } = req.query;
