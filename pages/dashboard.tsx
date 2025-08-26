@@ -3,9 +3,23 @@ import { useRouter } from 'next/router';
 import CalendarDay from '../components/CalendarDay';
 import DatePicker from '../components/DatePicker';
 
+interface Slot {
+  rampNumber: number;
+  start: string;
+  end: string;
+  status: 'FREE' | 'BOOKED' | 'CLOSED';
+  expired?: boolean;
+  closedReason?: string | null;
+}
+
 interface BookingFormState {
   type: 'LOADING' | 'UNLOADING';
-  regNr: string; company: string; email: string; phone: string; goodsType: 'IFCO' | 'GEN_CARGO'; reference?: string;
+  regNr: string;
+  company: string;
+  email: string;
+  phone: string;
+  goodsType: 'IFCO' | 'GEN_CARGO';
+  reference?: string;
 }
 
 export default function Dashboard() {
@@ -26,7 +40,7 @@ export default function Dashboard() {
     if(res.ok){ setSlots(await res.json()); }
   }
 
-  const [selectedSlot, setSelectedSlot] = useState<any>(null);
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
 
   function onSlotClick(slot:any){
     if(slot.status==='BOOKED') return;
@@ -141,9 +155,9 @@ export default function Dashboard() {
             className="bg-brand-500 hover:bg-brand-500/80 disabled:opacity-50 px-6 py-2 rounded text-sm flex items-center gap-2"
           >
             {loading ? <>
-              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
               Booker...
             </> : 'Book valgt tid'}
