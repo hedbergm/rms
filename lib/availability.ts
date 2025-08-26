@@ -18,7 +18,7 @@ interface Config { ramps: number[]; slotMinutes: number; windowStart: { h: numbe
 // Oppdatert: fjernet laste rampe 11 og losse rampe 5
 export const LOADING_RAMPS = [8,9,10];
 export const UNLOADING_RAMPS = [3,4];
-const LOADING_CONFIG: Config = { ramps: LOADING_RAMPS, slotMinutes: 60, windowStart: {h:8,m:0}, windowEnd: {h:17,m:0} }; // Last possible start 16:00
+const LOADING_CONFIG: Config = { ramps: LOADING_RAMPS, slotMinutes: 60, windowStart: {h:8,m:0}, windowEnd: {h:18,m:0} }; // Last possible start 17:00
 const UNLOADING_CONFIG: Config = { ramps: UNLOADING_RAMPS, slotMinutes: 45, windowStart: {h:8,m:0}, windowEnd: {h:18,m:0} }; // Last possible start 17:15
 
 export async function getAvailability(date: Date, bookingType: "LOADING" | "UNLOADING") {
