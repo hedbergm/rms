@@ -77,7 +77,12 @@ export async function getAvailability(date: Date, bookingType: "LOADING" | "UNLO
       const timeStr = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
       console.log("Creating slot for time:", timeStr);
       
-      const slotStart = new Date(`${osloDateStr}T${timeStr}:00`);
+      const slotStartLocal = formatInTimeZone(
+        new Date(`${osloDateStr}T${timeStr}:00`),
+        TIMEZONE,
+        "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"
+      );
+      const slotStart = new Date(slotStartLocal);
       const slotEnd = new Date(slotStart.getTime() + slotMinutes * 60000);
       
       for (const ramp of cfg.ramps) {
