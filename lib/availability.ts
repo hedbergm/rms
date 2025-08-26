@@ -32,9 +32,15 @@ export async function getAvailability(date: Date, bookingType: "LOADING" | "UNLO
   
   const cfg = bookingType === "LOADING" ? LOADING_CONFIG : UNLOADING_CONFIG;
   
-  // Get current time in Oslo
-  const currentOsloTime = new Date(formatInTimeZone(new Date(), TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss.000xxx"));
-  const cutoffTime = new Date(currentOsloTime.getTime() + 60*60*1000);
+  // Get current time in Oslo with 1 hour buffer
+  const now = new Date();
+  const todayOslo = formatInTimeZone(now, TIMEZONE, "yyyy-MM-dd");
+  const currentHourOslo = formatInTimeZone(now, TIMEZONE, "HH");
+  const currentMinuteOslo = formatInTimeZone(now, TIMEZONE, "mm");
+  
+  // For slots today, mark as expired if less than 1 hour from now
+  const isToday = osloDate.getTime() === new Date(todayOslo).getTime();
+  const currentMinutesSinceMidnight = isToday ? (parseInt(currentHourOslo) * 60 + parseInt(currentMinuteOslo)) : -1;
   
   // Fetch bookings and closures first
   const existingBookings = await prisma.booking.findMany({
@@ -102,7 +108,8 @@ export async function getAvailability(date: Date, bookingType: "LOADING" | "UNLO
           return minutesSinceMidnight >= startM && minutesSinceMidnight < (startM + dur);
         });
         
-        const expired = slotStart < cutoffTime;
+        const slotMinutesSinceMidnight = hour * 60 + minute;
+        const expired = isToday && slotMinutesSinceMidnight <= (currentMinutesSinceMidnight + 60);
         
         slots.push({
           rampNumber: ramp,
