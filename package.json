@@ -11,13 +11,14 @@
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "seed": "node prisma/seed.js",
-  "postinstall": "npx prisma generate && npx prisma migrate deploy"
+    "postinstall": "npx prisma generate && npx prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "6.14.0",
     "bcryptjs": "^2.4.3",
     "cookie": "^0.6.0",
     "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
     "jsonwebtoken": "^9.0.2",
     "next": "^14.2.0",
     "nodemailer": "^6.9.13",

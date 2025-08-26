@@ -1,5 +1,8 @@
 import { prisma } from './prisma';
-import { startOfDay, setHours, setMinutes, addMinutes, isBefore, isEqual } from 'date-fns';
+import { addMinutes, isBefore, startOfDay, setHours, setMinutes } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
+
+const TIMEZONE = 'Europe/Oslo';
 
 export type Slot = {
   rampNumber: number;
@@ -24,23 +27,20 @@ export async function getAvailability(date: Date, type: 'LOADING' | 'UNLOADING')
   const day = date.getDay(); // 0 søn, 6 lør
   if (day === 0 || day === 6) return [];
   const cfg = type === 'LOADING' ? LOADING_CONFIG : UNLOADING_CONFIG;
-  // Debug input date
-  console.log('Input date:', date.toISOString(), 'Local:', date.toString());
+  // Convert input date to Norwegian time zone
+  const osloDate = new Date(formatInTimeZone(date, TIMEZONE, 'yyyy-MM-dd'));
   
-  // Ensure we work with local Norwegian time by explicitly setting hours
-  const dayStart = new Date(date);
-  dayStart.setHours(0, 0, 0, 0);
-  
-  const windowStart = new Date(dayStart);
+  // Set up window start/end times in Norwegian time
+  const windowStart = new Date(osloDate);
   windowStart.setHours(cfg.windowStart.h, cfg.windowStart.m, 0, 0);
   
-  const windowEnd = new Date(dayStart);
+  const windowEnd = new Date(osloDate);
   windowEnd.setHours(cfg.windowEnd.h, cfg.windowEnd.m, 0, 0);
   
-  // Debug calculated times
-  console.log('dayStart:', dayStart.toISOString(), 'Local:', dayStart.toString());
-  console.log('windowStart:', windowStart.toISOString(), 'Local:', windowStart.toString());
-  console.log('windowEnd:', windowEnd.toISOString(), 'Local:', windowEnd.toString());
+  // Debug info
+  console.log('Oslo date:', formatInTimeZone(osloDate, TIMEZONE, 'yyyy-MM-dd HH:mm:ss'));
+  console.log('Window start (Oslo):', formatInTimeZone(windowStart, TIMEZONE, 'yyyy-MM-dd HH:mm:ss'));
+  console.log('Window end (Oslo):', formatInTimeZone(windowEnd, TIMEZONE, 'yyyy-MM-dd HH:mm:ss'));
   
   const slots: Slot[] = [];
 
@@ -59,7 +59,7 @@ export async function getAvailability(date: Date, type: 'LOADING' | 'UNLOADING')
     if (client.closedSlot) {
       closures = await client.closedSlot.findMany({
         where: {
-          date: dayStart,
+          date: osloDate,
           OR: [
             { type: type },
             { type: 'BOTH' }
@@ -73,8 +73,11 @@ export async function getAvailability(date: Date, type: 'LOADING' | 'UNLOADING')
 
   function getClosure(ramp: number, slotStart: Date) {
     if (!closures.length) return null;
-    // Calculate minutes since start of day in local time
-    const offset = slotStart.getHours() * 60 + slotStart.getMinutes();
+    // Calculate minutes since start of day in Oslo time
+    const osloTime = formatInTimeZone(slotStart, TIMEZONE, 'HH:mm');
+    const [hours, minutes] = osloTime.split(':').map(Number);
+    const offset = hours * 60 + minutes;
+    
     return closures.find((c: any) => {
       if (c.rampNumber !== null && c.rampNumber !== ramp) return false;
       if (c.startMinute == null) return true; // hele dagen
