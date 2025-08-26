@@ -24,11 +24,25 @@ export async function getAvailability(date: Date, type: 'LOADING' | 'UNLOADING')
   const day = date.getDay(); // 0 søn, 6 lør
   if (day === 0 || day === 6) return [];
   const cfg = type === 'LOADING' ? LOADING_CONFIG : UNLOADING_CONFIG;
-  // Ensure we work with local Norwegian time
-  const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
+  // Debug input date
+  console.log('Input date:', date.toISOString(), 'Local:', date.toString());
+  
+  // Ensure we work with local Norwegian time by explicitly setting hours
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  
+  const windowStart = new Date(dayStart);
+  windowStart.setHours(cfg.windowStart.h, cfg.windowStart.m, 0, 0);
+  
+  const windowEnd = new Date(dayStart);
+  windowEnd.setHours(cfg.windowEnd.h, cfg.windowEnd.m, 0, 0);
+  
+  // Debug calculated times
+  console.log('dayStart:', dayStart.toISOString(), 'Local:', dayStart.toString());
+  console.log('windowStart:', windowStart.toISOString(), 'Local:', windowStart.toString());
+  console.log('windowEnd:', windowEnd.toISOString(), 'Local:', windowEnd.toString());
+  
   const slots: Slot[] = [];
-  const windowStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), cfg.windowStart.h, cfg.windowStart.m, 0);
-  const windowEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), cfg.windowEnd.h, cfg.windowEnd.m, 0);
 
   // Fetch bookings for that day and type
   const bookings = await prisma.booking.findMany({

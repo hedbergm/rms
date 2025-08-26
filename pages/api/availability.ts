@@ -9,7 +9,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { date, type } = req.query;
     if (!date || typeof date !== 'string') return res.status(400).json({ message: 'Mangler dato' });
     const bookingType = (type === 'UNLOADING') ? 'UNLOADING' : 'LOADING';
-    const d = new Date(date + 'T00:00:00');
+    
+    // Debug incoming date
+    console.log('Incoming date query:', date);
+    
+    // Explicitly handle the date in local time
+    const [year, month, day] = date.split('-').map(Number);
+    const d = new Date(year, month - 1, day);
+    
+    console.log('Parsed date:', d.toISOString(), 'Local:', d.toString());
+    
     if (isNaN(d.getTime())) return res.status(400).json({ message: 'Ugyldig dato' });
     const slots = await getAvailability(d, bookingType);
     return res.json(slots);

@@ -19,7 +19,11 @@ export default function CalendarDay({ slots, onSlotClick, selectedSlot }:{ slots
         <tbody>
           {times.map(t=> {
             const tSlots = slots.filter(s=>s.start===t);
-            const timeLabel = new Date(t).toLocaleTimeString('no-NO',{hour:'2-digit',minute:'2-digit'});
+            // Debug the time coming from backend
+            console.log('Slot time from backend:', t);
+            const slotDate = new Date(t);
+            console.log('Parsed slot date:', slotDate.toString(), 'Local:', slotDate.toLocaleString('no-NO'));
+            const timeLabel = slotDate.toLocaleTimeString('no-NO',{hour:'2-digit',minute:'2-digit'});
             return (
               <tr key={t} className="border-t border-gray-800">
                 <td className="p-2 font-medium">{timeLabel}</td>
