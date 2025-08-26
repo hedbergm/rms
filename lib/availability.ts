@@ -57,20 +57,19 @@ export async function getAvailability(date: Date, bookingType: "LOADING" | "UNLO
 
   let slotClosures: any[] = [];
   try {
-    const client: any = prisma as any;
-    if (client.closedSlot) {
-      slotClosures = await client.closedSlot.findMany({
-        where: {
-          date: osloDate,
-          OR: [
-            { type: bookingType },
-            { type: "BOTH" }
-          ]
-        }
-      });
-    }
+    const closedSlots = await prisma.closedSlot.findMany({
+      where: {
+        date: osloDate,
+        OR: [
+          { type: bookingType },
+          { type: "BOTH" }
+        ]
+      }
+    });
+    console.log('Found closed slots:', closedSlots);
+    slotClosures = closedSlots;
   } catch (e) {
-    // ignore
+    console.error('Error fetching closed slots:', e);
   }
   
   // Generate slots array
@@ -103,11 +102,19 @@ export async function getAvailability(date: Date, bookingType: "LOADING" | "UNLO
         // Check for closure
         const minutesSinceMidnight = hour * 60 + minute;
         const closure = slotClosures.find(c => {
+          // Hvis rampNumber er satt, må den matche
           if (c.rampNumber !== null && c.rampNumber !== ramp) return false;
-          if (c.startMinute == null) return true; // hele dagen
+
+          // Hvis ingen starttid er satt, er hele dagen stengt
+          if (c.startMinute === null) return true;
+
+          // Sjekk om tiden er innenfor stengt periode
           const startM = c.startMinute;
           const dur = c.durationMinutes ?? (24*60 - startM);
-          return minutesSinceMidnight >= startM && minutesSinceMidnight < (startM + dur);
+          const slotInRange = minutesSinceMidnight >= startM && minutesSinceMidnight < (startM + dur);
+          
+          console.log(`Checking closure: ramp=${ramp}, time=${hour}:${minute}, closure=${JSON.stringify(c)}, inRange=${slotInRange}`);
+          return slotInRange;
         });
         
         const slotMinutesSinceMidnight = hour * 60 + minute;
