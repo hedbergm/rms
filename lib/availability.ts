@@ -24,10 +24,11 @@ export async function getAvailability(date: Date, type: 'LOADING' | 'UNLOADING')
   const day = date.getDay(); // 0 søn, 6 lør
   if (day === 0 || day === 6) return [];
   const cfg = type === 'LOADING' ? LOADING_CONFIG : UNLOADING_CONFIG;
-  const dayStart = startOfDay(date);
+  // Ensure we work with local Norwegian time
+  const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
   const slots: Slot[] = [];
-  const windowStart = setMinutes(setHours(dayStart, cfg.windowStart.h), cfg.windowStart.m);
-  const windowEnd = setMinutes(setHours(dayStart, cfg.windowEnd.h), cfg.windowEnd.m);
+  const windowStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), cfg.windowStart.h, cfg.windowStart.m, 0);
+  const windowEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), cfg.windowEnd.h, cfg.windowEnd.m, 0);
 
   // Fetch bookings for that day and type
   const bookings = await prisma.booking.findMany({
@@ -58,7 +59,8 @@ export async function getAvailability(date: Date, type: 'LOADING' | 'UNLOADING')
 
   function getClosure(ramp: number, slotStart: Date) {
     if (!closures.length) return null;
-    const offset = Math.floor((slotStart.getTime() - dayStart.getTime()) / 60000);
+    // Calculate minutes since start of day in local time
+    const offset = slotStart.getHours() * 60 + slotStart.getMinutes();
     return closures.find((c: any) => {
       if (c.rampNumber !== null && c.rampNumber !== ramp) return false;
       if (c.startMinute == null) return true; // hele dagen
