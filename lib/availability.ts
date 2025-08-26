@@ -22,29 +22,27 @@ const LOADING_CONFIG: Config = { ramps: LOADING_RAMPS, slotMinutes: 60, windowSt
 const UNLOADING_CONFIG: Config = { ramps: UNLOADING_RAMPS, slotMinutes: 45, windowStart: {h:8,m:0}, windowEnd: {h:18,m:0} }; // Last possible start 17:15
 
 export async function getAvailability(date: Date, bookingType: "LOADING" | "UNLOADING") {
+  // Convert input date to Oslo timezone at midnight
+  const osloMidnight = formatInTimeZone(date, TIMEZONE, "yyyy-MM-dd'T'00:00:00.000xxx");
+  const osloDate = new Date(osloMidnight);
+  
   // Ingen slots i helg
-  const day = date.getDay(); // 0 søn, 6 lør
+  const day = osloDate.getDay(); // 0 søn, 6 lør
   if (day === 0 || day === 6) return [];
   
   const cfg = bookingType === "LOADING" ? LOADING_CONFIG : UNLOADING_CONFIG;
   
-  // Get date components in Oslo time
-  const osloDateStr = formatInTimeZone(date, TIMEZONE, "yyyy-MM-dd");
-  console.log("Oslo date string:", osloDateStr);
-  
-  // Generate slots array
-  const slots: Slot[] = [];
-  const slotMinutes = cfg.slotMinutes;
-  const currentTime = new Date();
-  const cutoffTime = new Date(currentTime.getTime() + 60*60*1000);
+  // Get current time in Oslo
+  const currentOsloTime = new Date(formatInTimeZone(new Date(), TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss.000xxx"));
+  const cutoffTime = new Date(currentOsloTime.getTime() + 60*60*1000);
   
   // Fetch bookings and closures first
   const existingBookings = await prisma.booking.findMany({
     where: {
       type: bookingType,
       start: {
-        gte: new Date(osloDateStr + "T00:00:00"),
-        lt: new Date(osloDateStr + "T23:59:59")
+        gte: osloDate,
+        lt: new Date(osloDate.getTime() + 24*60*60*1000)
       }
     }
   });
@@ -55,7 +53,7 @@ export async function getAvailability(date: Date, bookingType: "LOADING" | "UNLO
     if (client.closedSlot) {
       slotClosures = await client.closedSlot.findMany({
         where: {
-          date: new Date(osloDateStr),
+          date: osloDate,
           OR: [
             { type: bookingType },
             { type: "BOTH" }
@@ -67,23 +65,26 @@ export async function getAvailability(date: Date, bookingType: "LOADING" | "UNLO
     // ignore
   }
   
+  // Generate slots array
+  const slots: Slot[] = [];
+  const slotMinutes = cfg.slotMinutes;
+  
   // Generate slots with exact times
   for (let hour = cfg.windowStart.h; hour < cfg.windowEnd.h; hour++) {
     for (let minute = 0; minute < 60; minute += slotMinutes) {
       // Skip if this would go past the end time
       if (hour === cfg.windowEnd.h - 1 && minute + slotMinutes > cfg.windowEnd.m) continue;
       
-      // Create dates in Oslo timezone
-      const timeStr = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-      console.log("Creating slot for time:", timeStr);
+      // Create slot time in Oslo timezone
+      const slotTime = new Date(osloDate);
+      slotTime.setHours(hour, minute, 0, 0);
       
-      const slotStartLocal = formatInTimeZone(
-        new Date(`${osloDateStr}T${timeStr}:00`),
-        TIMEZONE,
-        "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"
-      );
-      const slotStart = new Date(slotStartLocal);
-      const slotEnd = new Date(slotStart.getTime() + slotMinutes * 60000);
+      const slotStart = slotTime;
+      const slotEnd = new Date(slotTime.getTime() + slotMinutes * 60000);
+      
+      // Format for debugging
+      const timeStr = formatInTimeZone(slotTime, TIMEZONE, "HH:mm");
+      console.log("Creating slot for time:", timeStr);
       
       for (const ramp of cfg.ramps) {
         const booking = existingBookings.find(b => 
