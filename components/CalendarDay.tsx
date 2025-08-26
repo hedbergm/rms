@@ -2,7 +2,7 @@ import React from 'react';
 
 interface Slot { rampNumber:number; start:string; end:string; status:'FREE'|'BOOKED'|'CLOSED'; expired?: boolean; closedReason?: string|null; }
 
-export default function CalendarDay({ slots, onSlotClick }:{ slots: Slot[]; onSlotClick:(s:Slot)=>void }) {
+export default function CalendarDay({ slots, onSlotClick, selectedSlot }:{ slots: Slot[]; onSlotClick:(s:Slot)=>void; selectedSlot?: Slot|null }) {
   if(!slots.length) return <div className="mt-4">Ingen slots.</div>;
   const ramps = Array.from(new Set(slots.map(s=>s.rampNumber))).sort((a,b)=>a-b);
   // group by start
@@ -41,9 +41,12 @@ export default function CalendarDay({ slots, onSlotClick }:{ slots: Slot[]; onSl
                 ${isClosed? 'bg-red-900/40 border-red-500/40 text-red-300 cursor-not-allowed'
                 : isBooked? 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
                 : isExpired? 'bg-gray-800 border-gray-700 text-gray-500 cursor-not-allowed'
-                : 'bg-brand-500 border-brand-500 hover:bg-brand-500/80 text-white'}`}
+                : selectedSlot?.rampNumber === slot.rampNumber && selectedSlot?.start === slot.start
+                  ? 'bg-brand-600 border-brand-400 text-white'
+                  : 'bg-brand-500 border-brand-500 hover:bg-brand-500/80 text-white'}`}
             >
-              {isClosed? 'Stengt' : isBooked? 'Booket' : isExpired? 'For sent' : 'Ledig'}
+              {isClosed? 'Stengt' : isBooked? 'Booket' : isExpired? 'For sent' 
+                : selectedSlot?.rampNumber === slot.rampNumber && selectedSlot?.start === slot.start ? 'Valgt' : 'Ledig'}
             </button>
             </div>
                     </td>

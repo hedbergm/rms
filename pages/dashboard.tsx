@@ -26,19 +26,38 @@ export default function Dashboard() {
     if(res.ok){ setSlots(await res.json()); }
   }
 
+  const [selectedSlot, setSelectedSlot] = useState<any>(null);
+
   function onSlotClick(slot:any){
     if(slot.status==='BOOKED') return;
-    // prefill times
-    book(slot);
+    setSelectedSlot(slot === selectedSlot ? null : slot);
+    setMessage('');
   }
 
-  async function book(slot:any){
-    setLoading(true); setMessage('');
-    const body = { ...form, type, rampNumber: slot.rampNumber, start: slot.start };
+  async function book(){
+    if(!selectedSlot) return;
+    
+    // Validate form
+    if(!form.regNr) return setMessage('Registreringsnummer må fylles ut');
+    if(!form.company) return setMessage('Firmanavn må fylles ut');
+    if(!form.email) return setMessage('Epost må fylles ut');
+    if(!form.phone) return setMessage('Telefon må fylles ut');
+    
+    setLoading(true);
+    setMessage('');
+    
+    const body = { ...form, type, rampNumber: selectedSlot.rampNumber, start: selectedSlot.start };
     const res = await fetch('/api/bookings', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    
+    if(res.ok){ 
+      setMessage('Booket!');
+      setSelectedSlot(null);
+      loadSlots();
+    } else {
+      const d = await res.json().catch(()=>({message:'Feil'}));
+      setMessage(d.message||'Feil');
+    }
     setLoading(false);
-    if(res.ok){ setMessage('Booket!'); loadSlots(); }
-    else { const d = await res.json().catch(()=>({message:'Feil'})); setMessage(d.message||'Feil'); }
   }
 
   async function logout(){ await fetch('/api/auth/logout',{method:'POST'}); router.push('/'); }
@@ -112,8 +131,28 @@ export default function Dashboard() {
           <input value={form.reference||''} onChange={e=>setForm(f=>({...f,reference:e.target.value}))} className="bg-gray-800 p-2 rounded" placeholder="Ordrenr / referanse" />
         </div>
       </div>
-      {message && <div className="text-sm text-green-400">{message}</div>}
-      <CalendarDay slots={slots} onSlotClick={onSlotClick} />
+      {message && <div className={`text-sm ${message === 'Booket!' ? 'text-green-400' : 'text-red-400'}`}>{message}</div>}
+      <CalendarDay slots={slots} onSlotClick={onSlotClick} selectedSlot={selectedSlot} />
+      {selectedSlot && (
+        <div className="mt-4 flex items-center gap-4">
+          <button
+            onClick={book}
+            disabled={loading}
+            className="bg-brand-500 hover:bg-brand-500/80 disabled:opacity-50 px-6 py-2 rounded text-sm flex items-center gap-2"
+          >
+            {loading ? <>
+              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Booker...
+            </> : 'Book valgt tid'}
+          </button>
+          <span className="text-sm text-gray-400">
+            {new Date(selectedSlot.start).toLocaleTimeString('no-NO',{hour:'2-digit',minute:'2-digit'})} - Rampe {selectedSlot.rampNumber}
+          </span>
+        </div>
+      )}
       {user?.role === 'ADMIN' && (
         <>
           <div>
