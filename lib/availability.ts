@@ -22,9 +22,11 @@ const LOADING_CONFIG: Config = { ramps: LOADING_RAMPS, slotMinutes: 60, windowSt
 const UNLOADING_CONFIG: Config = { ramps: UNLOADING_RAMPS, slotMinutes: 45, windowStart: {h:8,m:0}, windowEnd: {h:18,m:0} }; // Last possible start 17:15
 
 export async function getAvailability(date: Date, bookingType: "LOADING" | "UNLOADING") {
-  // Convert input date to Oslo timezone at midnight
-  const osloMidnight = formatInTimeZone(date, TIMEZONE, "yyyy-MM-dd'T'00:00:00.000xxx");
-  const osloDate = new Date(osloMidnight);
+  // Set date to Oslo midnight to avoid timezone issues
+  const yyyy = formatInTimeZone(date, TIMEZONE, "yyyy");
+  const mm = formatInTimeZone(date, TIMEZONE, "MM");
+  const dd = formatInTimeZone(date, TIMEZONE, "dd");
+  const osloDate = new Date(Date.UTC(parseInt(yyyy), parseInt(mm)-1, parseInt(dd)));
   
   // Ingen slots i helg
   const day = osloDate.getDay(); // 0 søn, 6 lør
@@ -81,15 +83,15 @@ export async function getAvailability(date: Date, bookingType: "LOADING" | "UNLO
       // Skip if this would go past the end time
       if (hour === cfg.windowEnd.h - 1 && minute + slotMinutes > cfg.windowEnd.m) continue;
       
-      // Create slot time in Oslo timezone
-      const slotTime = new Date(osloDate);
-      slotTime.setHours(hour, minute, 0, 0);
+      // Create slot time in UTC to match the osloDate
+      const slotTimeUTC = new Date(osloDate);
+      slotTimeUTC.setUTCHours(hour - 2, minute, 0, 0); // Subtract 2 hours for UTC conversion
       
-      const slotStart = slotTime;
-      const slotEnd = new Date(slotTime.getTime() + slotMinutes * 60000);
+      const slotStart = slotTimeUTC;
+      const slotEnd = new Date(slotTimeUTC.getTime() + slotMinutes * 60000);
       
       // Format for debugging
-      const timeStr = formatInTimeZone(slotTime, TIMEZONE, "HH:mm");
+      const timeStr = formatInTimeZone(slotStart, TIMEZONE, "HH:mm");
       console.log("Creating slot for time:", timeStr);
       
       for (const ramp of cfg.ramps) {
@@ -115,9 +117,9 @@ export async function getAvailability(date: Date, bookingType: "LOADING" | "UNLO
           rampNumber: ramp,
           start: slotStart.toISOString(),
           end: slotEnd.toISOString(),
-          status: booking ? "BOOKED" : (closure ? "CLOSED" : "FREE"),
+          status: booking ? "BOOKED" : (closure || expired ? "CLOSED" : "FREE"),
           bookingId: booking?.id,
-          expired: (closure ? true : expired),
+          expired: (closure || expired),
           closedReason: closure?.reason || null
         });
       }
